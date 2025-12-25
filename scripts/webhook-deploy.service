@@ -1,0 +1,16 @@
+[Unit]
+Description=GitHub Webhook Auto-Deploy for Schnuffelll.Shop
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+Environment=WEBHOOK_PORT=9000
+Environment=WEBHOOK_SECRET=CHANGE_THIS_SECRET
+Environment=APP_DIR=/var/www/digital-store
+ExecStart=/var/www/digital-store/scripts/webhook-deploy.sh start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
