@@ -1,0 +1,331 @@
+// Prisma Schema - Professional E-Commerce
+// Support: Product Variants, Image Gallery, Rich Descriptions
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USER & AUTHENTICATION
+// ==========================================
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  avatar    String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  
+  orders    Order[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ==========================================
+// CATEGORIES
+// ==========================================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    // "Cloud Hosting", "Game Topup"
+  slug        String    @unique
+  description String?
+  image       String?   // Icon/banner kategori
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  
+  products    Product[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// ==========================================
+// PRODUCTS & VARIANTS
+// ==========================================
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String   // "Mobile Legends", "VPS High Performance"
+  slug        String   @unique
+  description String   @db.Text  // Rich HTML content
+  shortDesc   String?  // Short description for cards
+  
+  // Media
+  thumbnail   String?  // Main image
+  images      String[] // Gallery images array
+  
+  // Relations
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  variants    ProductVariant[]
+  
+  // Settings
+  type        ProductType @default(MANUAL)
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  
+  // SEO
+  metaTitle   String?
+  metaDesc    String?
+  
+  orderItems  OrderItem[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@map("products")
+}
+
+model ProductVariant {
+  id          String  @id @default(uuid())
+  name        String  // "RAM 4GB - 2 Core", "86 Diamonds", "1 Bulan"
+  sku         String? @unique // Kode unik stok
+  
+  // Pricing
+  price       Decimal @db.Decimal(12, 2)  // Harga jual
+  costPrice   Decimal? @db.Decimal(12, 2) // Harga modal (untuk admin)
+  comparePrice Decimal? @db.Decimal(12, 2) // Harga coret
+  
+  // Stock
+  stock       Int     @default(0)
+  lowStockAlert Int   @default(5) // Alert kalau stok di bawah ini
+  trackStock  Boolean @default(true)
+  
+  // For automated products (VPS/Pterodactyl)
+  serverConfig Json?  // { cpu: 2, ram: 4096, disk: 50, ... }
+  apiConfig    Json?  // { provider: "pterodactyl", nestId: 1, ... }
+  
+  // Credentials stock for manual products
+  credentials Credential[]
+  
+  // Settings
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+  
+  // Relations
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String
+  
+  orderItems  OrderItem[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+enum ProductType {
+  AUTOMATED  // API-based delivery
+  MANUAL     // Stock/credential-based delivery
+}
+
+// Stock items for MANUAL variants
+model Credential {
+  id        String    @id @default(uuid())
+  data      String    @db.Text // Encrypted: username|password or license key
+  isSold    Boolean   @default(false)
+  soldAt    DateTime?
+  
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId String
+  
+  orderItem OrderItem? @relation(fields: [orderItemId], references: [id])
+  orderItemId String?
+  
+  createdAt DateTime  @default(now())
+
+  @@index([variantId, isSold])
+  @@map("credentials")
+}
+
+// ==========================================
+// ORDERS & TRANSACTIONS
+// ==========================================
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique // ORD-20231225-XXXX
+  
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  
+  items         OrderItem[]
+  
+  // Pricing
+  subtotal      Decimal       @db.Decimal(12, 2)
+  discount      Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  
+  // Status
+  status        OrderStatus   @default(PENDING)
+  
+  // Payment
+  paymentMethod String?
+  paymentRef    String?       // Reference from gateway
+  paymentData   Json?         // Full response
+  paymentUrl    String?       // Payment page URL
+  expiredAt     DateTime?     // Payment expiry
+  
+  // Coupon
+  coupon        Coupon?       @relation(fields: [couponId], references: [id])
+  couponId      String?
+  
+  // Timestamps
+  paidAt        DateTime?
+  processedAt   DateTime?
+  completedAt   DateTime?
+  
+  // Customer info snapshot
+  customerEmail String
+  customerName  String
+  customerPhone String?
+  
+  notes         String?       // Admin notes
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId      String
+  
+  product      Product  @relation(fields: [productId], references: [id])
+  productId    String
+  
+  variant      ProductVariant @relation(fields: [variantId], references: [id])
+  variantId    String
+  
+  // Snapshot at time of order
+  productName  String
+  variantName  String
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(12, 2)
+  totalPrice   Decimal  @db.Decimal(12, 2)
+  
+  // Delivery
+  deliveryData  Json?    // API response data (VPS IP, etc)
+  deliveryStatus DeliveryStatus @default(PENDING)
+  deliveredAt   DateTime?
+  
+  // Linked credentials (for manual products)
+  credentials   Credential[]
+  
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING      // Waiting for payment
+  PAID         // Payment confirmed
+  PROCESSING   // Being processed
+  COMPLETED    // All items delivered
+  FAILED       // Payment failed
+  CANCELLED    // Cancelled
+  REFUNDED     // Refunded
+}
+
+enum DeliveryStatus {
+  PENDING      // Not yet delivered
+  PROCESSING   // API call in progress
+  DELIVERED    // Successfully delivered
+  FAILED       // Delivery failed
+}
+
+// ==========================================
+// COUPONS
+// ==========================================
+
+model Coupon {
+  id            String      @id @default(uuid())
+  code          String      @unique
+  description   String?
+  type          CouponType
+  value         Decimal     @db.Decimal(12, 2)
+  minPurchase   Decimal?    @db.Decimal(12, 2)
+  maxDiscount   Decimal?    @db.Decimal(12, 2)
+  usageLimit    Int?
+  usageCount    Int         @default(0)
+  isActive      Boolean     @default(true)
+  
+  validFrom     DateTime    @default(now())
+  validUntil    DateTime?
+  
+  orders        Order[]
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([code])
+  @@map("coupons")
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+// ==========================================
+// FILE UPLOADS
+// ==========================================
+
+model Upload {
+  id        String   @id @default(uuid())
+  filename  String   // Original filename
+  path      String   // Stored path: /uploads/products/xxx.jpg
+  url       String   // Full URL
+  mimetype  String
+  size      Int      // Bytes
+  
+  createdAt DateTime @default(now())
+
+  @@map("uploads")
+}
+
+// ==========================================
+// SETTINGS
+// ==========================================
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

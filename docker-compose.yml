@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: schnuffelll-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-digital_store}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - schnuffelll-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Express.js)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: schnuffelll-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/digital_store?schema=public}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      SERVER_PORT: 3001
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      APP_URL: ${APP_URL:-http://localhost:3001}
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - schnuffelll-network
+    volumes:
+      # IMPORTANT: Persist uploaded files outside container
+      - ./uploads:/app/public/uploads
+
+  # Frontend (Next.js)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: schnuffelll-client
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      NEXT_PUBLIC_UPLOAD_URL: ${NEXT_PUBLIC_UPLOAD_URL:-http://localhost:3001/uploads}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    networks:
+      - schnuffelll-network
+
+networks:
+  schnuffelll-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
