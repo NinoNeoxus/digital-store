@@ -38,6 +38,8 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
       NEXT_PUBLIC_UPLOAD_URL: ${NEXT_PUBLIC_UPLOAD_URL:-http://localhost:3001/uploads}
       INTERNAL_API_URL: http://server:3001/api
+      NEXTAUTH_URL: ${APP_URL}
+      NEXTAUTH_SECRET: ${JWT_SECRET}
     ports:
       - "3000:3000"
     depends_on:
