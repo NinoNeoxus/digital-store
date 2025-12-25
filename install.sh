@@ -3,7 +3,7 @@
 # ================================================
 #   SCHNUFFELLL.SHOP - AUTO DEPLOYMENT SCRIPT
 #   Author: @schnuffelll
-#   Version: 2.1 - With Auto-Deploy Webhook
+#   Version: 2.2 - SQLite & Docker Optimized
 # ================================================
 
 # Colors
@@ -29,8 +29,8 @@ print_banner() {
     echo "║   ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝         ║"
     echo "║                                                           ║"
     echo "║         🚀 DIGITAL STORE AUTO DEPLOYMENT 🚀              ║"
-    echo "║              schnuffelll.shop v2.1                        ║"
-    echo "║           + GitHub Auto-Deploy Webhook                    ║"
+    echo "║              schnuffelll.shop v2.2                        ║"
+    echo "║           + SQLite Support (No Postgres)                  ║"
     echo "║                                                           ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -166,7 +166,6 @@ setup_env() {
     
     # Generate secrets
     JWT_SECRET=$(openssl rand -base64 32)
-    DB_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9')
     WEBHOOK_SECRET=$(openssl rand -hex 32)
     
     cat > "$ENV_FILE" << EOF
@@ -179,10 +178,8 @@ NODE_ENV=production
 APP_NAME=Schnuffelll Shop
 APP_URL=https://${DOMAIN_NAME}
 
-DATABASE_URL=postgresql://postgres:${DB_PASS}@db:5432/digital_store?schema=public
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=${DB_PASS}
-POSTGRES_DB=digital_store
+# SQLite Database
+DATABASE_URL=file:./dev.db
 
 JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRES_IN=7d
@@ -198,7 +195,7 @@ NEXT_PUBLIC_APP_URL=https://${DOMAIN_NAME}
 WEBHOOK_SECRET=${WEBHOOK_SECRET}
 WEBHOOK_PORT=9000
 
-# Payment Gateway (Isi manual)
+# Payment Gateway (Isi manual manual setelah deploy)
 TRIPAY_API_KEY=
 TRIPAY_PRIVATE_KEY=
 TRIPAY_MERCHANT_CODE=
@@ -254,6 +251,11 @@ run_docker() {
     
     cd "$APP_DIR" || exit
     
+    # Create volume directories
+    mkdir -p uploads
+    mkdir -p server/prisma
+    touch server/prisma/dev.db
+    
     docker-compose down 2>/dev/null
     docker-compose up -d --build
     
@@ -268,6 +270,11 @@ run_docker() {
         docker-compose logs --tail=50
         exit 1
     fi
+    
+    # Run Seed
+    log_info "Running Database Seed..."
+    docker-compose exec -T server npx prisma migrate deploy
+    docker-compose exec -T server npx prisma db seed
 }
 
 # Setup Nginx
@@ -320,6 +327,9 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript;
     
+    # Client Content Max Size for Uploads
+    client_max_body_size 10M;
+
     # Webhook endpoint for GitHub
     location /webhook/deploy {
         proxy_pass http://webhook;
@@ -448,23 +458,6 @@ print_summary() {
     echo "║                                                                ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
-    
-    # Save secrets to file for reference
-    cat > "$APP_DIR/DEPLOY_SECRETS.txt" << EOF
-=== GITHUB SECRETS (Add to repo settings) ===
-
-WEBHOOK_URL = https://$DOMAIN_NAME/webhook/deploy
-WEBHOOK_SECRET = $WEBHOOK_SECRET
-
-=== VPS SSH (Optional for fallback) ===
-VPS_HOST = $(curl -s ifconfig.me)
-VPS_USER = root
-VPS_SSH_KEY = [Your SSH Private Key]
-
-=== Generated $(date) ===
-EOF
-    
-    log_success "Secrets saved to $APP_DIR/DEPLOY_SECRETS.txt"
 }
 
 # Main

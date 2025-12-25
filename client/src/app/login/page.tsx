@@ -3,19 +3,57 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/lib/use-toast';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const router = useRouter();
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate login
-        setTimeout(() => {
+
+        try {
+            const res = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+            });
+
+            if (res?.error) {
+                toast({
+                    title: "Login Gagal",
+                    description: "Email atau password salah",
+                    variant: "destructive"
+                });
+            } else {
+                toast({
+                    title: "Login Berhasil",
+                    description: "Selamat datang kembali!",
+                });
+                router.push('/');
+                router.refresh();
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Terjadi kesalahan saat login",
+                variant: "destructive"
+            });
+        } finally {
             setLoading(false);
-            alert('Login feature coming soon!');
-        }, 1000);
+        }
+    };
+
+    const handleGoogleLogin = () => {
+        signIn('google', { callbackUrl: '/' });
     };
 
     return (
@@ -42,6 +80,8 @@ export default function LoginPage() {
                                     placeholder="nama@email.com"
                                     className="w-full pl-10 pr-4 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -61,6 +101,8 @@ export default function LoginPage() {
                                     placeholder="••••••••"
                                     className="w-full pl-10 pr-12 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
                                 <button
                                     type="button"
@@ -113,7 +155,10 @@ export default function LoginPage() {
 
                     {/* Social Login */}
                     <div className="space-y-3">
-                        <button className="w-full py-3 px-4 bg-card border border-white/10 rounded-lg hover:bg-white/5 transition-colors inline-flex items-center justify-center gap-3">
+                        <button
+                            onClick={handleGoogleLogin}
+                            className="w-full py-3 px-4 bg-card border border-white/10 rounded-lg hover:bg-white/5 transition-colors inline-flex items-center justify-center gap-3"
+                        >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                 <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />

@@ -1,4 +1,4 @@
-import { PrismaClient, ProductType, Role, CouponType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ async function main() {
             name: 'Administrator',
             email: 'admin@schnuffelll.shop',
             password: hashedPassword,
-            role: Role.ADMIN,
+            role: 'ADMIN',
             balance: 0,
         },
     });
@@ -100,12 +100,13 @@ async function main() {
       `,
             shortDesc: 'VPS Indonesia dengan SSD NVMe dan uptime 99.9%',
             categoryId: categories[0].id,
-            type: ProductType.AUTOMATED,
+            type: 'AUTOMATED',
             isActive: true,
             isFeatured: true,
         },
     });
 
+    await prisma.productVariant.deleteMany({ where: { productId: vpsProduct.id } });
     await prisma.productVariant.createMany({
         data: [
             {
@@ -145,7 +146,6 @@ async function main() {
                 serverConfig: JSON.stringify({ ram: 8192, cpu: 4, disk: 160, bandwidth: 5000 }),
             },
         ],
-        skipDuplicates: true,
     });
     console.log('✅ VPS Product created with 4 variants');
 
@@ -171,12 +171,13 @@ async function main() {
       `,
             shortDesc: 'Server Minecraft dengan panel mudah dan setup instan',
             categoryId: categories[1].id,
-            type: ProductType.AUTOMATED,
+            type: 'AUTOMATED',
             isActive: true,
             isFeatured: true,
         },
     });
 
+    await prisma.productVariant.deleteMany({ where: { productId: mcProduct.id } });
     await prisma.productVariant.createMany({
         data: [
             {
@@ -204,7 +205,6 @@ async function main() {
                 serverConfig: JSON.stringify({ ram: 8192, cpu: 200, disk: 40 }),
             },
         ],
-        skipDuplicates: true,
     });
     console.log('✅ Minecraft Product created with 3 variants');
 
@@ -228,12 +228,13 @@ async function main() {
       `,
             shortDesc: 'Top up diamond ML murah dan instan',
             categoryId: categories[2].id,
-            type: ProductType.AUTOMATED,
+            type: 'AUTOMATED',
             isActive: true,
             isFeatured: true,
         },
     });
 
+    await prisma.productVariant.deleteMany({ where: { productId: mlProduct.id } });
     await prisma.productVariant.createMany({
         data: [
             { name: '86 Diamonds', price: 19000, stock: 999, productId: mlProduct.id, sortOrder: 0 },
@@ -245,7 +246,6 @@ async function main() {
             { name: '706 Diamonds', price: 152000, stock: 999, productId: mlProduct.id, sortOrder: 6 },
             { name: '2195 Diamonds', price: 456000, stock: 999, productId: mlProduct.id, sortOrder: 7 },
         ],
-        skipDuplicates: true,
     });
     console.log('✅ Mobile Legends Product created with 8 variants');
 
@@ -270,12 +270,13 @@ async function main() {
       `,
             shortDesc: 'Akun Netflix Private, UHD 4K, Full Garansi',
             categoryId: categories[3].id,
-            type: ProductType.MANUAL,
+            type: 'MANUAL',
             isActive: true,
             isFeatured: true,
         },
     });
 
+    await prisma.productVariant.deleteMany({ where: { productId: netflixProduct.id } });
     await prisma.productVariant.createMany({
         data: [
             { name: '1 Bulan', price: 45000, comparePrice: 65000, stock: 10, productId: netflixProduct.id, sortOrder: 0 },
@@ -283,7 +284,6 @@ async function main() {
             { name: '6 Bulan', price: 220000, comparePrice: 350000, stock: 10, productId: netflixProduct.id, sortOrder: 2 },
             { name: '12 Bulan', price: 400000, comparePrice: 650000, stock: 5, productId: netflixProduct.id, sortOrder: 3 },
         ],
-        skipDuplicates: true,
     });
     console.log('✅ Netflix Product created with 4 variants');
 
@@ -296,7 +296,7 @@ async function main() {
         create: {
             code: 'WELCOME10',
             description: 'Diskon 10% untuk pembelian pertama',
-            type: CouponType.PERCENTAGE,
+            type: 'PERCENTAGE',
             value: 10,
             minPurchase: 50000,
             maxDiscount: 50000,
@@ -310,7 +310,7 @@ async function main() {
         create: {
             code: 'NEWYEAR25',
             description: 'Diskon 25% Tahun Baru 2024',
-            type: CouponType.PERCENTAGE,
+            type: 'PERCENTAGE',
             value: 25,
             minPurchase: 100000,
             maxDiscount: 100000,
@@ -325,7 +325,7 @@ async function main() {
         create: {
             code: 'HEMAT50K',
             description: 'Potongan langsung Rp 50.000',
-            type: CouponType.FIXED,
+            type: 'FIXED',
             value: 50000,
             minPurchase: 200000,
             usageLimit: 100,

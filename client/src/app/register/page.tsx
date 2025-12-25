@@ -3,18 +3,62 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/lib/use-toast';
 
 export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
+
+    const router = useRouter();
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setTimeout(() => {
+
+        try {
+            // Use internal API proxy
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password
+                    // phone is not yet in register schema in backend, so skipping for now
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                toast({
+                    title: "Registrasi Berhasil",
+                    description: "Akun berhasil dibuat. Silakan login.",
+                });
+                router.push('/login');
+            } else {
+                toast({
+                    title: "Registrasi Gagal",
+                    description: data.error || "Gagal membuat akun",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Terjadi kesalahan sistem",
+                variant: "destructive"
+            });
+        } finally {
             setLoading(false);
-            alert('Register feature coming soon!');
-        }, 1000);
+        }
     };
 
     return (
@@ -41,6 +85,8 @@ export default function RegisterPage() {
                                     placeholder="John Doe"
                                     className="w-full pl-10 pr-4 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -55,6 +101,8 @@ export default function RegisterPage() {
                                     placeholder="nama@email.com"
                                     className="w-full pl-10 pr-4 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -69,6 +117,8 @@ export default function RegisterPage() {
                                     placeholder="08123456789"
                                     className="w-full pl-10 pr-4 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -84,6 +134,8 @@ export default function RegisterPage() {
                                     className="w-full pl-10 pr-12 py-3 bg-card border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     required
                                     minLength={8}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
                                 <button
                                     type="button"

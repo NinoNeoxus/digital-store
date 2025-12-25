@@ -289,7 +289,7 @@ router.get('/admin/:id', authenticate, isAdmin, async (req: AuthRequest, res: Re
 router.post('/', authenticate, isAdmin, async (req: AuthRequest, res: Response) => {
     try {
         const data = createProductSchema.parse(req.body);
-        const { variants, ...productData } = data;
+        const { variants, images, ...productData } = data;
 
         // Check slug uniqueness
         const existingSlug = await prisma.product.findUnique({
@@ -304,6 +304,9 @@ router.post('/', authenticate, isAdmin, async (req: AuthRequest, res: Response) 
             const newProduct = await tx.product.create({
                 data: {
                     ...productData,
+                    images: {
+                        create: images.map(url => ({ url }))
+                    },
                     variants: {
                         create: variants.map((v, index) => ({
                             ...v,
@@ -311,11 +314,14 @@ router.post('/', authenticate, isAdmin, async (req: AuthRequest, res: Response) 
                             comparePrice: v.comparePrice ?? null,
                             costPrice: v.costPrice ?? null,
                             sortOrder: v.sortOrder ?? index,
+                            serverConfig: v.serverConfig ? JSON.stringify(v.serverConfig) : undefined,
+                            apiConfig: v.apiConfig ? JSON.stringify(v.apiConfig) : undefined,
                         })),
                     },
                 },
                 include: {
                     variants: true,
+                    images: true,
                     category: { select: { id: true, name: true } },
                 },
             });
@@ -343,7 +349,7 @@ router.post('/', authenticate, isAdmin, async (req: AuthRequest, res: Response) 
 router.put('/:id', authenticate, isAdmin, async (req: AuthRequest, res: Response) => {
     try {
         const data = updateProductSchema.parse(req.body);
-        const { variants, ...productData } = data;
+        const { variants, images, ...productData } = data;
 
         const existingProduct = await prisma.product.findUnique({
             where: { id: req.params.id },
@@ -366,10 +372,26 @@ router.put('/:id', authenticate, isAdmin, async (req: AuthRequest, res: Response
         // Update in transaction
         const product = await prisma.$transaction(async (tx) => {
             // Update product
-            const updated = await tx.product.update({
+            await tx.product.update({
                 where: { id: req.params.id },
                 data: productData,
             });
+
+            // Handle images
+            if (images) {
+                await tx.productImage.deleteMany({
+                    where: { productId: req.params.id }
+                });
+
+                // Create image records one by one or createMany if supported (SQLite supports createMany in recent Prisma)
+                // But ProductImage is a model.
+                // Safest to map create.
+                for (const url of images) {
+                    await tx.productImage.create({
+                        data: { url, productId: req.params.id }
+                    })
+                }
+            }
 
             // Handle variants if provided
             if (variants && variants.length > 0) {
@@ -386,6 +408,8 @@ router.put('/:id', authenticate, isAdmin, async (req: AuthRequest, res: Response
                         comparePrice: v.comparePrice ?? null,
                         costPrice: v.costPrice ?? null,
                         sortOrder: v.sortOrder ?? index,
+                        serverConfig: v.serverConfig ? JSON.stringify(v.serverConfig) : undefined,
+                        apiConfig: v.apiConfig ? JSON.stringify(v.apiConfig) : undefined,
                     })),
                 });
             }
@@ -394,6 +418,7 @@ router.put('/:id', authenticate, isAdmin, async (req: AuthRequest, res: Response
                 where: { id: req.params.id },
                 include: {
                     variants: { orderBy: { sortOrder: 'asc' } },
+                    images: true,
                     category: { select: { id: true, name: true } },
                 },
             });

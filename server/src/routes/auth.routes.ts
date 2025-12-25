@@ -151,3 +151,66 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: 'Gagal mengambil data user' });
     }
 });
+// Google Login
+router.post('/google', async (req: Request, res: Response) => {
+    try {
+        const { email, name, googleId, avatar } = req.body;
+
+        if (!email || !googleId) {
+            return res.status(400).json({ error: 'Email dan Google ID wajib diisi' });
+        }
+
+        let user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (user) {
+            // User exists, update googleId if not present
+            if (!user.googleId) {
+                user = await prisma.user.update({
+                    where: { email },
+                    data: { googleId, avatar: user.avatar || avatar },
+                });
+            }
+        } else {
+            // Create a new user
+            user = await prisma.user.create({
+                data: {
+                    name: name || 'User',
+                    email,
+                    password: await bcrypt.hash(Math.random().toString(36), 10), // Random password
+                    googleId,
+                    avatar,
+                },
+            });
+        }
+
+        if (!user.isActive) {
+            return res.status(401).json({ error: 'Akun dinonaktifkan' });
+        }
+
+        // Generate token
+        const token = jwt.sign(
+            { userId: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'secret',
+            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        );
+
+        res.json({
+            message: 'Login berhasil',
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                balance: user.balance,
+                avatar: user.avatar
+            },
+            token,
+        });
+
+    } catch (error) {
+        console.error('Google login error:', error);
+        res.status(500).json({ error: 'Gagal login dengan Google' });
+    }
+});

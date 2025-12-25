@@ -4,6 +4,7 @@ import './globals.css';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
+import { Providers } from '@/components/providers';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -46,12 +47,14 @@ export default function RootLayout({
     return (
         <html lang="id" className="dark">
             <body className={`${inter.variable} font-sans min-h-screen flex flex-col`}>
-                <Navbar />
-                <main className="flex-1">
-                    {children}
-                </main>
-                <Footer />
-                <Toaster />
+                <Providers>
+                    <Navbar />
+                    <main className="flex-1">
+                        {children}
+                    </main>
+                    <Footer />
+                    <Toaster />
+                </Providers>
             </body>
         </html>
     );

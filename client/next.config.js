@@ -16,11 +16,11 @@ const nextConfig = {
     },
     async rewrites() {
         // Proxy API requests to backend
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://server:3001/api';
+        const backendUrl = process.env.INTERNAL_API_URL || 'http://server:3001/api';
         return [
             {
-                source: '/api/:path*',
-                destination: `${apiUrl}/:path*`,
+                source: '/api/:path((?!auth).*)',
+                destination: `${backendUrl}/:path*`,
             },
         ];
     },
