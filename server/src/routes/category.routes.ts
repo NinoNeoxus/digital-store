@@ -51,10 +51,10 @@ router.get('/:slug', async (req: Request, res: Response) => {
 // Create category (admin only)
 router.post('/', authenticate, isAdmin, async (req: AuthRequest, res: Response) => {
     try {
-        const { name, slug, description, icon, sortOrder } = req.body;
+        const { name, slug, description, image, sortOrder } = req.body;
 
         const category = await prisma.category.create({
-            data: { name, slug, description, icon, sortOrder },
+            data: { name, slug, description, image, sortOrder },
         });
 
         res.status(201).json({ message: 'Kategori berhasil dibuat', category });

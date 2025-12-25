@@ -69,8 +69,8 @@ router.get('/', async (req: Request, res: Response) => {
 
         if (search) {
             where.OR = [
-                { name: { contains: search as string, mode: 'insensitive' } },
-                { description: { contains: search as string, mode: 'insensitive' } },
+                { name: { contains: search as string } },
+                { description: { contains: search as string } },
             ];
         }
 
@@ -210,8 +210,8 @@ router.get('/admin/all', authenticate, isAdmin, async (req: AuthRequest, res: Re
 
         if (search) {
             where.OR = [
-                { name: { contains: search as string, mode: 'insensitive' } },
-                { slug: { contains: search as string, mode: 'insensitive' } },
+                { name: { contains: search as string } },
+                { slug: { contains: search as string } },
             ];
         }
 

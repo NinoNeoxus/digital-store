@@ -22,7 +22,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
                 items: {
                     include: {
                         product: {
-                            select: { name: true, slug: true, image: true },
+                            select: { name: true, slug: true, thumbnail: true },
                         },
                     },
                 },
@@ -49,9 +49,9 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
                 items: {
                     include: {
                         product: true,
+                        credentials: true,
                     },
                 },
-                credentials: true,
                 user: {
                     select: { id: true, name: true, email: true },
                 },
@@ -78,10 +78,20 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Keranjang kosong' });
         }
 
-        // Get products and calculate total
+        // Get user details
+        const user = await prisma.user.findUnique({
+            where: { id: req.user?.userId },
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+
+        // Get products with variants
         const productIds = items.map((item: any) => item.productId);
         const products = await prisma.product.findMany({
             where: { id: { in: productIds }, isActive: true },
+            include: { variants: true },
         });
 
         if (products.length !== items.length) {
@@ -95,21 +105,37 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
             const product = products.find((p) => p.id === item.productId);
             if (!product) continue;
 
-            // Check stock for manual products
-            if (product.type === 'MANUAL' && product.stock < item.quantity) {
+            // Determine variant (use request variantId or default to first active variant)
+            let variant = item.variantId
+                ? product.variants.find(v => v.id === item.variantId)
+                : product.variants.find(v => v.isActive);
+
+            if (!variant && product.variants.length > 0) {
+                variant = product.variants[0];
+            }
+
+            if (!variant) {
+                return res.status(400).json({ error: `Varian produk ${product.name} tidak tersedia` });
+            }
+
+            // Check stock
+            if (variant.stock < item.quantity) {
                 return res.status(400).json({
-                    error: `Stok ${product.name} tidak mencukupi`
+                    error: `Stok ${product.name} (${variant.name}) tidak mencukupi`
                 });
             }
 
-            const itemTotal = product.price.mul(item.quantity);
+            const price = variant.price;
+            const itemTotal = price.mul(item.quantity);
             subtotal = subtotal.add(itemTotal);
 
             orderItems.push({
                 productId: product.id,
                 productName: product.name,
+                variantId: variant.id,
+                variantName: variant.name,
                 quantity: item.quantity,
-                unitPrice: product.price,
+                unitPrice: price,
                 totalPrice: itemTotal,
             });
         }
@@ -151,7 +177,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         const order = await prisma.order.create({
             data: {
                 orderNumber: generateOrderNumber(),
-                userId: req.user!.userId,
+                userId: user.id,
+                customerName: user.name,
+                customerEmail: user.email,
                 subtotal,
                 discount,
                 totalAmount,
@@ -165,11 +193,19 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
             },
         });
 
-        // Update coupon usage
+        // Update coupon usage and stock
         if (couponId) {
             await prisma.coupon.update({
                 where: { id: couponId },
                 data: { usageCount: { increment: 1 } },
+            });
+        }
+
+        // Update stock for each item
+        for (const item of orderItems) {
+            await prisma.productVariant.update({
+                where: { id: item.variantId },
+                data: { stock: { decrement: item.quantity } },
             });
         }
 
