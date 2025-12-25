@@ -32,6 +32,9 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 expressjs
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Copy necessary files from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
