@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
     Server,
     Gamepad2,
@@ -8,7 +9,6 @@ import {
     Search,
     SlidersHorizontal
 } from 'lucide-react';
-import { ProductGridSkeleton } from '@/components/skeletons';
 
 export const metadata: Metadata = {
     title: 'Produk',
@@ -24,14 +24,14 @@ const categories = [
     { name: 'Akun Premium', slug: 'akun-premium', icon: Crown, count: 12 },
 ];
 
-// Sample products for display
+// Sample products with images
 const sampleProducts = [
     {
         id: '1',
         name: 'VPS High Performance',
         slug: 'vps-high-performance',
         shortDesc: 'VPS Indonesia dengan SSD NVMe dan uptime 99.9%',
-        thumbnail: null,
+        thumbnail: '/images/products/vps-server.png',
         category: { name: 'VPS & Server', slug: 'vps-server' },
         priceRange: { min: 50000, max: 400000 },
         isFeatured: true,
@@ -45,7 +45,7 @@ const sampleProducts = [
         name: 'Minecraft Server Hosting',
         slug: 'minecraft-server-hosting',
         shortDesc: 'Server Minecraft dengan panel mudah dan setup instan',
-        thumbnail: null,
+        thumbnail: '/images/products/minecraft-server.png',
         category: { name: 'Pterodactyl', slug: 'pterodactyl' },
         priceRange: { min: 35000, max: 120000 },
         isFeatured: true,
@@ -59,7 +59,7 @@ const sampleProducts = [
         name: 'Mobile Legends Diamonds',
         slug: 'mobile-legends-diamonds',
         shortDesc: 'Top up diamond ML murah dan instan',
-        thumbnail: null,
+        thumbnail: '/images/products/mobile-legends.png',
         category: { name: 'Game Top Up', slug: 'game-topup' },
         priceRange: { min: 19000, max: 456000 },
         isFeatured: true,
@@ -73,7 +73,7 @@ const sampleProducts = [
         name: 'Netflix Premium',
         slug: 'netflix-premium',
         shortDesc: 'Akun Netflix Private, UHD 4K, Full Garansi',
-        thumbnail: null,
+        thumbnail: '/images/products/netflix.png',
         category: { name: 'Akun Premium', slug: 'akun-premium' },
         priceRange: { min: 45000, max: 400000 },
         isFeatured: true,
@@ -84,16 +84,16 @@ const sampleProducts = [
     },
     {
         id: '5',
-        name: 'VPS Standard',
-        slug: 'vps-standard',
-        shortDesc: 'VPS dengan performa stabil untuk website',
-        thumbnail: null,
-        category: { name: 'VPS & Server', slug: 'vps-server' },
-        priceRange: { min: 75000, max: 300000 },
+        name: 'Spotify Premium',
+        slug: 'spotify-premium',
+        shortDesc: 'Akun Spotify Premium tanpa iklan',
+        thumbnail: '/images/products/spotify.png',
+        category: { name: 'Akun Premium', slug: 'akun-premium' },
+        priceRange: { min: 15000, max: 150000 },
         isFeatured: false,
         variants: [
-            { name: '2GB RAM', price: 75000 },
-            { name: '4GB RAM', price: 150000 },
+            { name: '1 Bulan', price: 15000 },
+            { name: '6 Bulan', price: 75000 },
         ],
     },
     {
@@ -101,7 +101,7 @@ const sampleProducts = [
         name: 'Free Fire Diamonds',
         slug: 'free-fire-diamonds',
         shortDesc: 'Top up diamond Free Fire cepat & murah',
-        thumbnail: null,
+        thumbnail: '/images/products/free-fire.png',
         category: { name: 'Game Top Up', slug: 'game-topup' },
         priceRange: { min: 15000, max: 350000 },
         isFeatured: false,
@@ -112,30 +112,30 @@ const sampleProducts = [
     },
     {
         id: '7',
-        name: 'Spotify Premium',
-        slug: 'spotify-premium',
-        shortDesc: 'Akun Spotify Premium tanpa iklan',
-        thumbnail: null,
-        category: { name: 'Akun Premium', slug: 'akun-premium' },
-        priceRange: { min: 15000, max: 150000 },
-        isFeatured: false,
-        variants: [
-            { name: '1 Bulan', price: 15000 },
-            { name: '6 Bulan', price: 75000 },
-        ],
-    },
-    {
-        id: '8',
         name: 'Valorant Points',
         slug: 'valorant-points',
         shortDesc: 'Top up VP Valorant instant',
-        thumbnail: null,
+        thumbnail: '/images/products/valorant.png',
         category: { name: 'Game Top Up', slug: 'game-topup' },
         priceRange: { min: 16000, max: 800000 },
         isFeatured: false,
         variants: [
             { name: '125 VP', price: 16000 },
             { name: '420 VP', price: 50000 },
+        ],
+    },
+    {
+        id: '8',
+        name: 'VPS Standard',
+        slug: 'vps-standard',
+        shortDesc: 'VPS dengan performa stabil untuk website',
+        thumbnail: '/images/products/vps-server.png',
+        category: { name: 'VPS & Server', slug: 'vps-server' },
+        priceRange: { min: 75000, max: 300000 },
+        isFeatured: false,
+        variants: [
+            { name: '2GB RAM', price: 75000 },
+            { name: '4GB RAM', price: 150000 },
         ],
     },
 ];
@@ -158,18 +158,29 @@ function ProductCard({ product }: { product: typeof sampleProducts[0] }) {
             className="group glass-card overflow-hidden product-card"
         >
             {/* Image */}
-            <div className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 relative">
+            <div className="aspect-video relative overflow-hidden">
+                {product.thumbnail ? (
+                    <Image
+                        src={product.thumbnail}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        {product.category.slug === 'vps-server' && <Server className="w-16 h-16 text-primary/50" />}
+                        {product.category.slug === 'pterodactyl' && <Gamepad2 className="w-16 h-16 text-primary/50" />}
+                        {product.category.slug === 'game-topup' && <Coins className="w-16 h-16 text-primary/50" />}
+                        {product.category.slug === 'akun-premium' && <Crown className="w-16 h-16 text-primary/50" />}
+                    </div>
+                )}
                 {product.isFeatured && (
                     <span className="absolute top-2 left-2 badge badge-primary">
                         Featured
                     </span>
                 )}
-                <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-30">
-                    {product.category.slug === 'vps-server' && <Server className="w-16 h-16" />}
-                    {product.category.slug === 'pterodactyl' && <Gamepad2 className="w-16 h-16" />}
-                    {product.category.slug === 'game-topup' && <Coins className="w-16 h-16" />}
-                    {product.category.slug === 'akun-premium' && <Crown className="w-16 h-16" />}
-                </div>
+                {/* Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60" />
             </div>
 
             {/* Content */}
@@ -292,7 +303,7 @@ export default function ProductsPage() {
                             ))}
                         </div>
 
-                        {/* Pagination - Placeholder */}
+                        {/* Pagination */}
                         <div className="mt-8 flex justify-center">
                             <div className="flex items-center gap-2">
                                 <button className="px-4 py-2 bg-secondary rounded-lg text-muted-foreground" disabled>

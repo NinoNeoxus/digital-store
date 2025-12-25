@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
     ArrowLeft,
     ShoppingCart,
@@ -8,7 +9,9 @@ import {
     Check,
     Zap,
     Shield,
-    Server
+    Server,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 
 // Sample product data
@@ -30,8 +33,10 @@ const product = {
     <p>Cocok untuk: Website, API Server, Game Server, VPN, dan lainnya.</p>
   `,
     shortDesc: 'VPS Indonesia dengan SSD NVMe dan uptime 99.9%',
-    thumbnail: null,
-    images: [],
+    thumbnail: '/images/products/vps-server.png',
+    images: [
+        '/images/products/vps-server.png',
+    ],
     category: { name: 'VPS & Server', slug: 'vps-server' },
     variants: [
         { id: '1', name: 'Starter - 1GB RAM', price: 50000, comparePrice: 75000, stock: 99 },
@@ -85,8 +90,21 @@ export default function ProductDetailPage() {
                     {/* Left - Images */}
                     <div className="space-y-4">
                         {/* Main Image */}
-                        <div className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center">
-                            <Server className="w-24 h-24 text-primary/50" />
+                        <div className="aspect-video relative rounded-xl overflow-hidden group">
+                            <Image
+                                src={product.thumbnail}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                                priority
+                            />
+                            {/* Navigation arrows */}
+                            <button className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70">
+                                <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70">
+                                <ChevronRight className="w-6 h-6" />
+                            </button>
                         </div>
 
                         {/* Thumbnail Gallery */}
@@ -94,8 +112,20 @@ export default function ProductDetailPage() {
                             {[1, 2, 3, 4].map((i) => (
                                 <div
                                     key={i}
-                                    className={`aspect-video bg-card rounded-lg border-2 ${i === 1 ? 'border-primary' : 'border-transparent'} cursor-pointer hover:border-primary/50 transition-colors`}
-                                />
+                                    className={`aspect-video relative rounded-lg overflow-hidden border-2 ${i === 1 ? 'border-primary' : 'border-transparent'} cursor-pointer hover:border-primary/50 transition-colors`}
+                                >
+                                    {i === 1 && product.thumbnail && (
+                                        <Image
+                                            src={product.thumbnail}
+                                            alt={`${product.name} ${i}`}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    )}
+                                    {i !== 1 && (
+                                        <div className="absolute inset-0 bg-card" />
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -210,7 +240,7 @@ export default function ProductDetailPage() {
                     <div className="glass-card p-8">
                         <h2 className="text-2xl font-bold mb-6">Deskripsi Produk</h2>
                         <div
-                            className="prose prose-invert max-w-none"
+                            className="prose prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-li:text-muted-foreground prose-a:text-primary"
                             dangerouslySetInnerHTML={{ __html: product.description }}
                         />
                     </div>
